@@ -8,7 +8,7 @@ Highlights:
 - Quick, ~110ms CPU (~40ms GPU) inference latency on Qualcomm Snapdragon 845
 - Distilled from [SAM 3.1](https://huggingface.co/facebook/sam3.1)
 
-[Click here](web-demo/) to check the online demo.
+[Click here](https://letmutex.github.io/bubble-pop/) to check online demo.
 
 ![Web Demo Screenshot](./demo.jpg)
 
@@ -39,6 +39,10 @@ uv run export.py model.pt --format onnx-fp16-wasm --output web-demo/assets/model
 uv pip install "onnx2tf[tensorflow]==2.6.8"
 uv run export.py model.pt --format tflite-fp16 --output model_fp16.tflite
 ```
+
+# Bindings
+
+Coming soon
 
 # Model info
 
