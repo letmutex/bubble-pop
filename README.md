@@ -17,6 +17,8 @@ Highlights:
 1. Prepare
 
 ```bash
+git clone https://github.com/letmutex/bubble-pop
+cd bubble-pop
 uv pip install "torch>=2.6" torchvision numpy opencv-python onnx
 ```
 
