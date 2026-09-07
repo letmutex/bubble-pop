@@ -1,4 +1,4 @@
-"""BubbleUNet deployment architecture and training-checkpoint loader."""
+"""BubbleUNet architecture and checkpoint loader."""
 
 from pathlib import Path
 
