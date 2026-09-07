@@ -1,0 +1,23 @@
+{
+  "name": "bubblepop-web-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "start": "vite preview",
+    "check": "tsc --noEmit",
+    "test": "bun test",
+    "test:browser": "bun scripts/browser-check.ts"
+  },
+  "dependencies": {
+    "onnxruntime-web": "1.22.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.0",
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.8.0",
+    "vite": "^8.2.2"
+  }
+}

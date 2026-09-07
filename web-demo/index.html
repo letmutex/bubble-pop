@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <title>BubblePop - Speech Bubble Extractor</title>
+    <link rel="stylesheet" href="./src/style.css" />
+    <script type="module" src="./src/main.ts"></script>
+  </head>
+  <body>
+    <header>
+      <h1>BubblePop</h1>
+      <div class="actions">
+        <button id="clear" class="quiet">Clear</button>
+        <button
+          id="options-button"
+          aria-expanded="false"
+          aria-controls="options"
+          aria-label="Options"
+        >
+          <span class="options-text">Options</span>
+          <span class="options-icon" aria-hidden="true">☰</span>
+        </button>
+      </div>
+    </header>
+    <main id="book" aria-label="Page workspace">
+      <article class="page" aria-label="Left page" data-page="0">
+        <p class="status" role="status" aria-live="polite">Detecting…</p>
+        <div class="sheet">
+          <img alt="First comic page" draggable="false" />
+          <svg class="overlay" aria-label="Detected speech bubbles"></svg>
+          <div class="empty" hidden>
+            <span>Drop an image here</span
+            ><button class="select">Select image</button>
+          </div>
+        </div>
+        <input type="file" accept="image/*" multiple hidden />
+      </article>
+      <article class="page" aria-label="Right page" data-page="1">
+        <p class="status" role="status" aria-live="polite">Detecting…</p>
+        <div class="sheet">
+          <img alt="Second comic page" draggable="false" />
+          <svg class="overlay" aria-label="Detected speech bubbles"></svg>
+          <div class="empty" hidden>
+            <span>Drop an image here</span
+            ><button class="select">Select image</button>
+          </div>
+        </div>
+        <input type="file" accept="image/*" multiple hidden />
+      </article>
+    </main>
+    <aside id="options" aria-label="Display options" hidden>
+      <label class="option-row" for="webgpu"
+        ><span id="webgpu-label">WebGPU acceleration</span
+        ><input id="webgpu" type="checkbox" checked
+      /></label>
+      <label class="option-row" for="outline"
+        >Bubble outline<input id="outline" type="checkbox" checked
+      /></label>
+      <label class="threshold-label" for="threshold"
+        >Confidence threshold<output id="threshold-value">85%</output></label
+      >
+      <input id="threshold" type="range" min="0" max="100" value="85" />
+      <label class="option-row" for="confidence"
+        >Confidence text<input id="confidence" type="checkbox"
+      /></label>
+    </aside>
+    <div
+      id="bubble-popup"
+      class="bubble-popup"
+      role="dialog"
+      aria-modal="false"
+      aria-label="Enlarged speech bubble"
+      hidden
+    >
+      <canvas
+        id="popup-canvas"
+        class="popup-canvas"
+        aria-label="Enlarged speech bubble"
+      ></canvas>
+    </div>
+  </body>
+</html>
