@@ -44,17 +44,17 @@ uv run export.py model.pt --format tflite-fp16 --output model_fp16.tflite
 
 # Bindings
 
-**[Kotlin (Android)](./library/kotlin)**
+[Kotlin (Android)](./library/kotlin)
 
 # Model info
 
 | Property | Details |
 | :--- | :--- |
-| **Architecture** | UNet |
-| **Backbone** | MobileNetV3-Small |
-| **Parameters** | 0.93M |
-| **Input** | Grayscale, 768 × 1024 |
-| **Output** | 3-channel logits (`mask`, `boundary`, `confidence`) |
+| Architecture | UNet |
+| Backbone | MobileNetV3-Small |
+| Parameters | 0.93M |
+| Input | Grayscale, 768 × 1024 |
+| Output | 3-channel logits (`mask`, `boundary`, `confidence`) |
 
 # Training
 
