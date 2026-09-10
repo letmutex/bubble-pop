@@ -79,6 +79,7 @@ The current version of the model may not perform well in the following cases:
 - [SAM 3.1](https://huggingface.co/facebook/sam3.1)
 - [MobileNetV3](https://research.google/blog/introducing-the-next-generation-of-on-device-vision-models-mobilenetv3-and-mobilenetedgetpu/)
 - [PicoSAM3](https://github.com/pbonazzi/picosam3)
+- [manga109-segmentation-bubble](https://huggingface.co/huyvux3005/manga109-segmentation-bubble)
 
 ## License
 
