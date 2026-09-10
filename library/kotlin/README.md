@@ -9,6 +9,20 @@ Currently, only Android target is supported.
 
 `runtime-yolo`: LiteRT + [huyvux3005/manga109-segmentation-bubble](https://huggingface.co/huyvux3005/manga109-segmentation-bubble) FP16 model, based on YOLO11n-seg. Could produce better edge details, but is larger and slower.
 
+There is a quick comparison table:
+
+|  | BubblePop | YOLO11n-seg | 
+| :--- | :--- | :--- |
+| Format | LiteRT FP 16 | LiteRT FP 16 |
+| Shared library size <br>(arm64-v8a) | 6.73 MB + 400KB | 6.73 MB + 400KB |
+| Model weights size | 1.84 MB | 5.85 MB |
+| Inference time (CPU) | ~110ms | ~920ms |
+| Inference time (GPU) | ~40ms | ~310ms |
+| Input size | 768x1024 | 1600x1600 |
+| Mask quality | High | High+ |
+
+*Results on Qualcomm Snapdragon 845*
+
 ## Usages
 
 Add dependency:

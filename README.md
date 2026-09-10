@@ -12,6 +12,11 @@ Highlights:
 
 ![Web Demo Screenshot](./demo.jpg)
 
+## Changelogs
+
+- **2026-0910** Update to a better checkpoint
+- **2026-0907** First release
+
 ## Usages
 
 1. Prepare
