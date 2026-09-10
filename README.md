@@ -44,7 +44,7 @@ uv run export.py model.pt --format tflite-fp16 --output model_fp16.tflite
 
 # Bindings
 
-Coming soon
+**[Kotlin (Android)](./library/kotlin)**
 
 # Model info
 
@@ -60,7 +60,7 @@ Coming soon
 
 **Pre-training:** This model is pre-trained on ~12K Web comics/manga pages; distilled directly from [SAM 3.1](https://huggingface.co/facebook/sam3.1)'s outputs.
 
-**Fine-tuning:** The best pre-trained checkpoint is fine-tuned using ~1.2K synthetic pages of hard-samples.
+**Fine-tuning:** The best pre-trained checkpoint is fine-tuned using ~2.4K synthetic pages of hard-samples.
 
 # Limitations
 
