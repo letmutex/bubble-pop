@@ -12,7 +12,7 @@ Highlights:
 
 ![Web Demo Screenshot](./demo.jpg)
 
-# Usages
+## Usages
 
 1. Prepare
 
@@ -42,11 +42,11 @@ uv pip install "onnx2tf[tensorflow]==2.6.8"
 uv run export.py model.pt --format tflite-fp16 --output model_fp16.tflite
 ```
 
-# Bindings
+## Bindings
 
 [Kotlin (Android)](./library/kotlin)
 
-# Model info
+## Model info
 
 | Property | Details |
 | :--- | :--- |
@@ -56,25 +56,25 @@ uv run export.py model.pt --format tflite-fp16 --output model_fp16.tflite
 | Input | Grayscale, 768 × 1024 |
 | Output | 3-channel logits (`mask`, `boundary`, `confidence`) |
 
-# Training
+## Training
 
 **Pre-training:** This model is pre-trained on ~12K Web comics/manga pages; distilled directly from [SAM 3.1](https://huggingface.co/facebook/sam3.1)'s outputs.
 
 **Fine-tuning:** The best pre-trained checkpoint is fine-tuned using ~2.4K synthetic pages of hard-samples.
 
-# Limitations
+## Limitations
 
 The current version of the model may not perform well in the following cases:
 
 - Transparent bubble, model may fail to detect them
 - Thin/long bubble tails, model may fail to detect the full tail
 
-# Acknowledgements
+## Acknowledgements
 
 - [SAM 3.1](https://huggingface.co/facebook/sam3.1)
 - [MobileNetV3](https://research.google/blog/introducing-the-next-generation-of-on-device-vision-models-mobilenetv3-and-mobilenetedgetpu/)
 - [PicoSAM3](https://github.com/pbonazzi/picosam3)
 
-# License
+## License
 
 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt)
