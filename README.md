@@ -49,7 +49,8 @@ uv run export.py model.pt --format tflite-fp16 --output model_fp16.tflite
 
 ## Bindings
 
-[Kotlin (Android)](./library/kotlin)
+- [Kotlin (Android)](./library/kotlin)
+- [Rust](./library/rust)
 
 ## Model info
 

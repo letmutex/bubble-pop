@@ -1,0 +1,7 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+*.pdb
+
+# Example outputs
+*_overlay.jpg
