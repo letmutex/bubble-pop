@@ -146,7 +146,7 @@ fn draw_bubble_overlay(
 
         intersections.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-        for chunk in intersections.chunks_exact(2) {
+        for chunk in intersections.as_chunks::<2>().0 {
             let x_start = (chunk[0].floor() as i32).max(0);
             let x_end = (chunk[1].ceil() as i32).min(width as i32 - 1);
 
