@@ -442,9 +442,7 @@ impl InterpreterState {
     ) -> Result<Self, BubblePopError> {
         let ptr = bytes.as_ptr() as *const c_void;
         let len = bytes.len();
-        let mut state = Self::create(bindings, options, |b| unsafe {
-            (b.model_create)(ptr, len)
-        })?;
+        let mut state = Self::create(bindings, options, |b| unsafe { (b.model_create)(ptr, len) })?;
         state._model_bytes = Some(bytes);
         Ok(state)
     }
@@ -549,7 +547,12 @@ impl InterpreterState {
 
         let interpreter = unsafe { (bindings.interpreter_create)(model, interp_options) };
         if interpreter.is_null() {
-            cleanup(std::ptr::null_mut(), interp_options, xnnpack_delegate, model);
+            cleanup(
+                std::ptr::null_mut(),
+                interp_options,
+                xnnpack_delegate,
+                model,
+            );
             return Err(BubblePopError::ModelLoadError(
                 "TfLiteInterpreterCreate failed".to_string(),
             ));

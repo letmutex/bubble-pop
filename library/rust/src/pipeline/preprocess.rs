@@ -1,5 +1,5 @@
+use super::letterbox::{INPUT_HEIGHT, INPUT_WIDTH, Letterbox, MEAN, STD};
 use crate::input::PixelFormat;
-use super::letterbox::{Letterbox, INPUT_HEIGHT, INPUT_WIDTH, MEAN, STD};
 
 #[derive(Clone, Copy)]
 struct XSample {
@@ -41,9 +41,7 @@ fn get_grayscale(pixels: &[u8], offset: usize, format: PixelFormat) -> f32 {
             let b = pixels[offset + 3] as f32;
             (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
         }
-        PixelFormat::Gray8 => {
-            pixels[offset] as f32 / 255.0
-        }
+        PixelFormat::Gray8 => pixels[offset] as f32 / 255.0,
     }
 }
 
@@ -63,7 +61,8 @@ pub fn preprocess(
     // 1. Precalculate X-mapping table once per image
     let mut x_table = Vec::with_capacity(box_info.resized_width);
     for local_x in 0..box_info.resized_width {
-        let sx = ((local_x as f32 + 0.5) * source_width as f32 / box_info.resized_width as f32 - 0.5)
+        let sx = ((local_x as f32 + 0.5) * source_width as f32 / box_info.resized_width as f32
+            - 0.5)
             .clamp(0.0, (source_width - 1) as f32);
         let x0 = sx as usize;
         let x1 = (x0 + 1).min(source_width - 1);
@@ -87,7 +86,8 @@ pub fn preprocess(
             destination[dst_row_start..dst_row_start + box_info.pad_x].fill(white);
         }
 
-        let sy = ((local_y as f32 + 0.5) * source_height as f32 / box_info.resized_height as f32 - 0.5)
+        let sy = ((local_y as f32 + 0.5) * source_height as f32 / box_info.resized_height as f32
+            - 0.5)
             .clamp(0.0, (source_height - 1) as f32);
         let y0 = sy as usize;
         let y1 = (y0 + 1).min(source_height - 1);

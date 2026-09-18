@@ -1,5 +1,5 @@
+use bubblepop::{BubbleDetector, Options, detect, detect_with_options};
 use std::path::PathBuf;
-use bubblepop::{detect, detect_with_options, BubbleDetector, Options};
 
 fn sample_image_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/page-1.jpg")
@@ -8,13 +8,20 @@ fn sample_image_path() -> PathBuf {
 #[test]
 fn test_global_detect_file() {
     let img_path = sample_image_path();
-    assert!(img_path.exists(), "Sample image does not exist: {:?}", img_path);
+    assert!(
+        img_path.exists(),
+        "Sample image does not exist: {:?}",
+        img_path
+    );
 
     let path_str = img_path.to_str().unwrap();
     let result = detect(path_str).expect("Global detect(file_path) should succeed");
 
     println!("Detected {} bubbles", result.bubbles.len());
-    println!("Inference: {:.2}ms, Total: {:.2}ms", result.inference_ms, result.total_ms);
+    println!(
+        "Inference: {:.2}ms, Total: {:.2}ms",
+        result.inference_ms, result.total_ms
+    );
 
     for (i, bubble) in result.bubbles.iter().enumerate() {
         println!(
@@ -31,7 +38,10 @@ fn test_global_detect_file() {
         assert!(bubble.points.len() >= 3);
     }
 
-    assert!(!result.bubbles.is_empty(), "Should detect bubbles on sample manga page");
+    assert!(
+        !result.bubbles.is_empty(),
+        "Should detect bubbles on sample manga page"
+    );
 }
 
 #[test]
@@ -66,7 +76,9 @@ fn test_detector_instance_prewarm() {
     println!("Prewarm took: {:?}", prewarm_time);
 
     let img_path = sample_image_path();
-    let result = detector.detect(&img_path).expect("detector.detect(&PathBuf)");
+    let result = detector
+        .detect(&img_path)
+        .expect("detector.detect(&PathBuf)");
     assert!(!result.bubbles.is_empty());
 }
 
@@ -128,7 +140,9 @@ fn test_from_model_bytes_caller_drop_safety() {
     };
 
     let img_path = sample_image_path();
-    let result = detector.detect(&img_path).expect("detect after model bytes dropped");
+    let result = detector
+        .detect(&img_path)
+        .expect("detect after model bytes dropped");
     assert!(!result.bubbles.is_empty());
 }
 
@@ -144,7 +158,9 @@ fn test_multithreaded_concurrent_detect() {
         let det = Arc::clone(&detector);
         let b = Arc::clone(&bytes);
         handles.push(std::thread::spawn(move || {
-            let res = det.detect(b.as_slice()).expect("Concurrent detect should succeed");
+            let res = det
+                .detect(b.as_slice())
+                .expect("Concurrent detect should succeed");
             assert!(!res.bubbles.is_empty());
         }));
     }

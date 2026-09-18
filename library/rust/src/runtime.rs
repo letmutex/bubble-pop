@@ -20,7 +20,10 @@ impl RuntimeSession {
         Self::from_bytes(Cow::Borrowed(EMBEDDED_MODEL_BYTES), options)
     }
 
-    pub(crate) fn from_bytes(bytes: Cow<'static, [u8]>, options: &Options) -> Result<Self, BubblePopError> {
+    pub(crate) fn from_bytes(
+        bytes: Cow<'static, [u8]>,
+        options: &Options,
+    ) -> Result<Self, BubblePopError> {
         let bindings = TfLiteBindings::load(options.runtime_lib_path.as_deref())?;
         let state = InterpreterState::from_bytes(&bindings, bytes, options)?;
 

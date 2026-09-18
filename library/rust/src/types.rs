@@ -84,4 +84,3 @@ pub struct DetectionResult {
     /// Non-overlapping breakdown of all detection phases.
     pub phase_timings: Vec<PhaseTiming>,
 }
-

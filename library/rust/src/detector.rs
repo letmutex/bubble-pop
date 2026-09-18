@@ -8,7 +8,7 @@ use crate::error::BubblePopError;
 use crate::input::{ImageSource, IntoImageSource, PixelFormat, RawPixelView};
 use crate::options::Options;
 use crate::pipeline::{
-    extract_bubbles, preprocess, Letterbox, PostprocessContext, INPUT_HEIGHT, INPUT_WIDTH,
+    INPUT_HEIGHT, INPUT_WIDTH, Letterbox, PostprocessContext, extract_bubbles, preprocess,
 };
 use crate::runtime::RuntimeSession;
 use crate::types::{DetectionResult, Phase, PhaseTiming};
@@ -41,7 +41,10 @@ impl BubbleDetector {
     }
 
     /// Creates a detector from a custom TFLite model file.
-    pub fn from_model_file<P: AsRef<Path>>(path: P, options: Options) -> Result<Self, BubblePopError> {
+    pub fn from_model_file<P: AsRef<Path>>(
+        path: P,
+        options: Options,
+    ) -> Result<Self, BubblePopError> {
         let session = RuntimeSession::from_file(path, &options)?;
         Ok(Self {
             session: Arc::new(session),
@@ -74,7 +77,10 @@ impl BubbleDetector {
     }
 
     /// Detects bubbles from an image source (file path, byte slice, DynamicImage, etc.).
-    pub fn detect<'a, I: IntoImageSource<'a>>(&self, input: I) -> Result<DetectionResult, BubblePopError> {
+    pub fn detect<'a, I: IntoImageSource<'a>>(
+        &self,
+        input: I,
+    ) -> Result<DetectionResult, BubblePopError> {
         let prep_start = Instant::now();
         let source = input.into_image_source()?;
         let prep_ms = prep_start.elapsed().as_secs_f64() * 1000.0;
@@ -86,10 +92,21 @@ impl BubbleDetector {
     pub fn detect_raw(&self, view: RawPixelView<'_>) -> Result<DetectionResult, BubblePopError> {
         let bpp = view.format.bytes_per_pixel();
         let stride = view.stride_bytes.unwrap_or(view.width as usize * bpp);
-        self.detect_raw_impl(view.pixels, view.width, view.height, view.format, stride, 0.0)
+        self.detect_raw_impl(
+            view.pixels,
+            view.width,
+            view.height,
+            view.format,
+            stride,
+            0.0,
+        )
     }
 
-    fn detect_source(&self, source: &ImageSource<'_>, prep_ms: f64) -> Result<DetectionResult, BubblePopError> {
+    fn detect_source(
+        &self,
+        source: &ImageSource<'_>,
+        prep_ms: f64,
+    ) -> Result<DetectionResult, BubblePopError> {
         self.detect_raw_impl(
             &source.data,
             source.width,
@@ -110,7 +127,9 @@ impl BubbleDetector {
         image_prep_ms: f64,
     ) -> Result<DetectionResult, BubblePopError> {
         if width == 0 || height == 0 {
-            return Err(BubblePopError::InvalidInput("Image dimensions must be positive".into()));
+            return Err(BubblePopError::InvalidInput(
+                "Image dimensions must be positive".into(),
+            ));
         }
 
         let bpp = format.bytes_per_pixel();
@@ -128,7 +147,9 @@ impl BubbleDetector {
             .checked_mul(stride_bytes)
             .and_then(|row_offset| row_offset.checked_add(min_stride))
             .ok_or_else(|| {
-                BubblePopError::InvalidInput("Image dimensions overflowed buffer size calculation".into())
+                BubblePopError::InvalidInput(
+                    "Image dimensions overflowed buffer size calculation".into(),
+                )
             })?;
 
         if pixels.len() < total_required_len {
@@ -143,43 +164,44 @@ impl BubbleDetector {
 
         // 1. Preprocessing (thread-local buffer for zero lock contention)
         let preprocess_start = Instant::now();
-        let ((bubbles, timings), inference_duration, preprocess_duration) = PREPROCESS_BUF.with(|buf_cell| {
-            let mut buf = buf_cell.borrow_mut();
-            let target_len = INPUT_HEIGHT * INPUT_WIDTH;
-            if buf.len() != target_len {
-                buf.resize(target_len, 0.0);
-            }
+        let ((bubbles, timings), inference_duration, preprocess_duration) =
+            PREPROCESS_BUF.with(|buf_cell| {
+                let mut buf = buf_cell.borrow_mut();
+                let target_len = INPUT_HEIGHT * INPUT_WIDTH;
+                if buf.len() != target_len {
+                    buf.resize(target_len, 0.0);
+                }
 
-            preprocess(
-                pixels,
-                width as usize,
-                height as usize,
-                stride_bytes,
-                format,
-                &letterbox,
-                &mut buf,
-            );
-            let preprocess_duration = preprocess_start.elapsed();
+                preprocess(
+                    pixels,
+                    width as usize,
+                    height as usize,
+                    stride_bytes,
+                    format,
+                    &letterbox,
+                    &mut buf,
+                );
+                let preprocess_duration = preprocess_start.elapsed();
 
-            // 2. Inference & 3. Postprocessing
-            let (out_channels, out_width, out_height) = self.session.output_shape();
-            let (res, inf_dur) = POSTPROCESS_CTX.with(|ctx_cell| {
-                let mut ctx = ctx_cell.borrow_mut();
-                self.session.infer_with(&buf, |logits| {
-                    extract_bubbles(
-                        &mut ctx,
-                        logits,
-                        out_channels,
-                        out_width,
-                        out_height,
-                        &letterbox,
-                        self.options.confidence_threshold,
-                    )
-                })
+                // 2. Inference & 3. Postprocessing
+                let (out_channels, out_width, out_height) = self.session.output_shape();
+                let (res, inf_dur) = POSTPROCESS_CTX.with(|ctx_cell| {
+                    let mut ctx = ctx_cell.borrow_mut();
+                    self.session.infer_with(&buf, |logits| {
+                        extract_bubbles(
+                            &mut ctx,
+                            logits,
+                            out_channels,
+                            out_width,
+                            out_height,
+                            &letterbox,
+                            self.options.confidence_threshold,
+                        )
+                    })
+                })?;
+
+                Ok::<_, BubblePopError>((res, inf_dur, preprocess_duration))
             })?;
-
-            Ok::<_, BubblePopError>((res, inf_dur, preprocess_duration))
-        })?;
 
         let total_duration = total_start.elapsed();
         let inference_ms = inference_duration.as_secs_f64() * 1000.0;

@@ -1,6 +1,6 @@
+use crate::error::BubblePopError;
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
-use crate::error::BubblePopError;
 
 /// Supported pixel memory layout formats.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,8 +55,8 @@ fn decode_memory<'a>(bytes: &[u8]) -> Result<ImageSource<'a>, BubblePopError> {
 
 fn decode_file<'a, P: AsRef<Path>>(path: P) -> Result<ImageSource<'a>, BubblePopError> {
     let p = path.as_ref();
-    let bytes = std::fs::read(p)
-        .map_err(|e| BubblePopError::IoError(e, p.display().to_string()))?;
+    let bytes =
+        std::fs::read(p).map_err(|e| BubblePopError::IoError(e, p.display().to_string()))?;
     decode_memory(&bytes)
 }
 

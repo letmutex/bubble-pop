@@ -1,6 +1,6 @@
-use crate::types::{BubblePath, BubblePoint};
 use super::contour::{simplify_polygon_rdp, trace_contour};
-use super::letterbox::{Letterbox, INPUT_HEIGHT, INPUT_WIDTH};
+use super::letterbox::{INPUT_HEIGHT, INPUT_WIDTH, Letterbox};
+use crate::types::{BubblePath, BubblePoint};
 
 const MASK_LOGIT_THRESHOLD: f32 = 0.0; // sigmoid(logit) >= 0.50
 const MIN_AREA_PIXELS: f32 = 60.0;
@@ -67,10 +67,10 @@ pub fn extract_bubbles(
     let crop_width = box_info.resized_width as f32 * output_scale_x;
     let crop_height = box_info.resized_height as f32 * output_scale_y;
 
-    let min_model_area = (MIN_AREA_PIXELS * box_info.scale * box_info.scale
-        * output_scale_x * output_scale_y)
-        .ceil()
-        .max(1.0) as usize;
+    let min_model_area =
+        (MIN_AREA_PIXELS * box_info.scale * box_info.scale * output_scale_x * output_scale_y)
+            .ceil()
+            .max(1.0) as usize;
 
     for start in 0..plane {
         let mask_logit = logits[start * pixel_stride];
@@ -127,7 +127,13 @@ pub fn extract_bubbles(
 
         if tail >= min_model_area && score >= confidence_threshold {
             let contour_start = std::time::Instant::now();
-            let raw_contour = trace_contour(&ctx.component, &ctx.queue, tail, output_width, output_height);
+            let raw_contour = trace_contour(
+                &ctx.component,
+                &ctx.queue,
+                tail,
+                output_width,
+                output_height,
+            );
             let simplified = simplify_polygon_rdp(&raw_contour, RDP_EPSILON_PX);
 
             let mut points = Vec::with_capacity(simplified.len());
@@ -155,10 +161,16 @@ pub fn extract_bubbles(
         }
     }
 
-    let scoring_duration = scoring_start.elapsed().saturating_sub(total_contour_duration);
+    let scoring_duration = scoring_start
+        .elapsed()
+        .saturating_sub(total_contour_duration);
 
     let packing_start = std::time::Instant::now();
-    bubbles.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+    bubbles.sort_by(|a, b| {
+        b.confidence
+            .partial_cmp(&a.confidence)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     let packing_duration = packing_start.elapsed();
 
     (

@@ -60,7 +60,10 @@ pub fn trace_contour(
             let dir = (back_dir + step) & 7;
             let nx = x + DX[dir];
             let ny = y + DY[dir];
-            if nx >= 0 && nx < width as i32 && ny >= 0 && ny < height as i32
+            if nx >= 0
+                && nx < width as i32
+                && ny >= 0
+                && ny < height as i32
                 && component[ny as usize * width + nx as usize] != 0
             {
                 found_dir = Some(dir);
