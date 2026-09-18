@@ -180,8 +180,8 @@ impl TfLiteBindings {
         let path = TfLiteBindings::resolve_shared_lib_path(custom_path);
         let Some(path) = path else {
             return Err(BubblePopError::RuntimeError(
-                "Cannot resolve LiteRT runtime shared lib from options.custom_path \
-                or env:LITERT_LIB_PATH or env:LITERT_BUILTIN_LIB_PATH or ./libLiteRt.[ext]"
+                "Cannot resolve TensorFlow Lite runtime shared library. \
+                Please ensure 'libtensorflowlite_c' is next to the executable or set TFLITE_LIB_PATH."
                     .to_string(),
             ));
         };
@@ -204,8 +204,8 @@ impl TfLiteBindings {
         }
 
         Err(BubblePopError::RuntimeError(format!(
-            "Failed to load LiteRT shared library (last error: {:?}). \
-            Please ensure 'libLiteRt' is in your system library path or set LITERT_LIB_PATH.",
+            "Failed to load TensorFlow Lite shared library (last error: {:?}). \
+            Please ensure 'libtensorflowlite_c' is in your executable path or set TFLITE_LIB_PATH.",
             last_err
         )))
     }
@@ -218,27 +218,25 @@ impl TfLiteBindings {
 
         // Executable directory
         #[cfg(target_os = "windows")]
-        let names = ["libLiteRt.dll"];
+        let name = "libtensorflowlite_c.dll";
         #[cfg(target_os = "linux")]
-        let names = ["libLiteRt.so"];
+        let name = "libtensorflowlite_c.so";
         #[cfg(target_os = "macos")]
-        let names = ["libLiteRt.dylib"];
+        let name = "libtensorflowlite_c.dylib";
         #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
-        let names = ["libLiteRt.so"];
+        let name = "libtensorflowlite_c.so";
 
         if let Ok(exe_path) = std::env::current_exe()
             && let Some(exe_dir) = exe_path.parent()
         {
-            for name in names {
-                let path = exe_dir.join(name);
-                if path.exists() {
-                    return Some(path);
-                }
+            let path = exe_dir.join(name);
+            if path.exists() {
+                return Some(path);
             }
         }
 
-        // Runtime environment variables
-        if let Ok(env_path) = std::env::var("LITERT_LIB_PATH") {
+        // Runtime environment variable
+        if let Ok(env_path) = std::env::var("TFLITE_LIB_PATH") {
             let path = PathBuf::from(env_path);
             if path.exists() {
                 return Some(path);
@@ -246,7 +244,7 @@ impl TfLiteBindings {
         }
 
         // Compile-time path injected by build.rs (downloaded or fetched prebuilt binary)
-        if let Some(builtin_path) = option_env!("LITERT_BUILTIN_LIB_PATH") {
+        if let Some(builtin_path) = option_env!("TFLITE_BUILTIN_LIB_PATH") {
             let path = PathBuf::from(builtin_path);
             if path.exists() {
                 return Some(path);

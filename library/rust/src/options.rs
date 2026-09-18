@@ -17,7 +17,7 @@ pub struct Options {
     pub confidence_threshold: f32,
     /// Number of worker threads for inference execution (default: 4).
     pub num_threads: usize,
-    /// Optional explicit path to the LiteRT runtime shared library (`libLiteRt.[ext]`).
+    /// Optional explicit path to the TensorFlow Lite C runtime shared library (`libtensorflowlite_c.[ext]`).
     pub runtime_lib_path: Option<PathBuf>,
 }
 
