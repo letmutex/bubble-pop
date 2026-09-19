@@ -6,42 +6,44 @@ use std::process::Command;
 
 const TFLITE_VERSION: &str = "2.17.1";
 
+fn get_library_name(os: &str) -> &'static str {
+    match os {
+        "windows" => "libtensorflowlite_c.dll",
+        "macos" => "libtensorflowlite_c.dylib",
+        _ => "libtensorflowlite_c.so",
+    }
+}
+
 #[derive(Debug)]
 struct PlatformSource {
     target_filename: &'static str,
-    aliases: &'static [&'static str],
     download_url: &'static str,
 }
 
 fn get_platform_source(os: &str, arch: &str) -> Option<PlatformSource> {
-    match (os, arch) {
-        ("windows", "x86_64") => Some(PlatformSource {
-            target_filename: "libtensorflowlite_c.dll",
-            aliases: &["tensorflowlite_c.dll", "libLiteRt.dll"],
-            download_url: "https://github.com/tphakala/tflite_c/releases/download/v2.17.1/tflite_c_v2.17.1_windows_amd64.zip",
-        }),
-        ("linux", "x86_64") => Some(PlatformSource {
-            target_filename: "libtensorflowlite_c.so",
-            aliases: &["libtensorflowlite_c.so.2.17.1", "libLiteRt.so"],
-            download_url: "https://github.com/tphakala/tflite_c/releases/download/v2.17.1/tflite_c_v2.17.1_linux_amd64.tar.gz",
-        }),
-        ("linux", "aarch64") => Some(PlatformSource {
-            target_filename: "libtensorflowlite_c.so",
-            aliases: &["libtensorflowlite_c.so.2.17.1", "libLiteRt.so"],
-            download_url: "https://github.com/tphakala/tflite_c/releases/download/v2.17.1/tflite_c_v2.17.1_linux_arm64.tar.gz",
-        }),
-        ("macos", "aarch64") => Some(PlatformSource {
-            target_filename: "libtensorflowlite_c.dylib",
-            aliases: &["libLiteRt.dylib"],
-            download_url: "https://github.com/tphakala/tflite_c/releases/download/v2.17.1/tflite_c_v2.17.1_darwin_arm64.tar.gz",
-        }),
-        ("macos", "x86_64") => Some(PlatformSource {
-            target_filename: "libtensorflowlite_c.dylib",
-            aliases: &["libLiteRt.dylib"],
-            download_url: "https://github.com/tphakala/tflite_c/releases/download/v2.17.0/tflite_c_v2.17.0_darwin_amd64.tar.gz",
-        }),
-        _ => None,
-    }
+    let target_filename = get_library_name(os);
+    let download_url = match (os, arch) {
+        ("windows", "x86_64") => {
+            "https://github.com/tphakala/tflite_c/releases/download/v2.17.1/tflite_c_v2.17.1_windows_amd64.zip"
+        }
+        ("linux", "x86_64") => {
+            "https://github.com/tphakala/tflite_c/releases/download/v2.17.1/tflite_c_v2.17.1_linux_amd64.tar.gz"
+        }
+        ("linux", "aarch64") => {
+            "https://github.com/tphakala/tflite_c/releases/download/v2.17.1/tflite_c_v2.17.1_linux_arm64.tar.gz"
+        }
+        ("macos", "aarch64") => {
+            "https://github.com/tphakala/tflite_c/releases/download/v2.17.1/tflite_c_v2.17.1_darwin_arm64.tar.gz"
+        }
+        ("macos", "x86_64") => {
+            "https://github.com/tphakala/tflite_c/releases/download/v2.17.0/tflite_c_v2.17.0_darwin_amd64.tar.gz"
+        }
+        _ => return None,
+    };
+    Some(PlatformSource {
+        target_filename,
+        download_url,
+    })
 }
 
 fn get_cache_dir() -> PathBuf {
@@ -146,14 +148,9 @@ fn find_library_in_dir(dir: &Path, target_filename: &str) -> Option<PathBuf> {
             } else if let Some(file_name) = path.file_name().and_then(|f| f.to_str()) {
                 let is_match = file_name == target_filename
                     || (target_filename.ends_with(".so")
-                        && (file_name.starts_with("libtensorflowlite_c.so")
-                            || file_name.starts_with("libLiteRt.so")))
-                    || (target_filename.ends_with(".dylib")
-                        && (file_name.contains("tensorflowlite_c")
-                            || file_name.contains("LiteRt")))
-                    || (target_filename.ends_with(".dll")
-                        && (file_name.contains("tensorflowlite_c")
-                            || file_name.contains("LiteRt")));
+                        && file_name.starts_with("libtensorflowlite_c.so"))
+                    || ((target_filename.ends_with(".dylib") || target_filename.ends_with(".dll"))
+                        && file_name.contains("tensorflowlite_c"));
 
                 if is_match && fs::metadata(&path).map(|m| m.len()).unwrap_or(0) > 100 * 1024 {
                     return Some(path);
@@ -268,8 +265,6 @@ fn fetch_platform_binary(
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-env-changed=TFLITE_LIB_DIR");
-    println!("cargo:rerun-if-env-changed=TFLITE_LIB_PATH");
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
@@ -288,44 +283,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let target_lib_path = out_dir.join(platform_source.target_filename);
 
-    // 1. Check if user provided an override directory via environment variable
-    let custom_dir = env::var("TFLITE_LIB_DIR").ok().map(PathBuf::from);
+    // Use persistent shared cache directory across all build profiles
+    let cache_platform_dir = get_cache_dir()
+        .join(TFLITE_VERSION)
+        .join(format!("{target_os}_{target_arch}"));
 
-    let effective_lib_path = if let Some(dir) = custom_dir {
-        let src = dir.join(platform_source.target_filename);
-        if src.exists() {
-            fs::copy(&src, &target_lib_path)?;
-            target_lib_path.clone()
-        } else {
-            src
-        }
-    } else {
-        // 2. Use persistent shared cache directory across all build profiles
-        let cache_platform_dir = get_cache_dir()
-            .join(TFLITE_VERSION)
-            .join(format!("{target_os}_{target_arch}"));
+    let cached_lib = fetch_platform_binary(&platform_source, &cache_platform_dir)?;
+    fs::copy(&cached_lib, &target_lib_path)?;
 
-        let cached_lib = fetch_platform_binary(&platform_source, &cache_platform_dir)?;
-        fs::copy(&cached_lib, &target_lib_path)?;
-        target_lib_path.clone()
-    };
-
-    // 3. Create aliases in OUT_DIR so dynamic loaders find the expected name under all conventions
-    for alias in platform_source.aliases {
-        let alias_path = out_dir.join(alias);
-        if !alias_path.exists() && target_lib_path.exists() {
-            let _ = fs::copy(&target_lib_path, &alias_path);
-        }
-    }
-
-    if let Some(parent) = effective_lib_path.parent() {
-        println!("cargo:rustc-link-search=native={}", parent.display());
-    }
     println!("cargo:rustc-link-search=native={}", out_dir.display());
 
     println!(
         "cargo:rustc-env=TFLITE_BUILTIN_LIB_PATH={}",
-        effective_lib_path.display()
+        target_lib_path.display()
     );
 
     Ok(())

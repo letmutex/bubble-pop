@@ -181,7 +181,7 @@ impl TfLiteBindings {
         let Some(path) = path else {
             return Err(BubblePopError::RuntimeError(
                 "Cannot resolve TensorFlow Lite runtime shared library. \
-                Please ensure 'libtensorflowlite_c' is next to the executable or set TFLITE_LIB_PATH."
+                Please ensure 'libtensorflowlite_c' is next to the executable."
                     .to_string(),
             ));
         };
@@ -205,7 +205,7 @@ impl TfLiteBindings {
 
         Err(BubblePopError::RuntimeError(format!(
             "Failed to load TensorFlow Lite shared library (last error: {:?}). \
-            Please ensure 'libtensorflowlite_c' is in your executable path or set TFLITE_LIB_PATH.",
+            Please ensure 'libtensorflowlite_c' is in your executable path.",
             last_err
         )))
     }
@@ -230,14 +230,6 @@ impl TfLiteBindings {
             && let Some(exe_dir) = exe_path.parent()
         {
             let path = exe_dir.join(name);
-            if path.exists() {
-                return Some(path);
-            }
-        }
-
-        // Runtime environment variable
-        if let Ok(env_path) = std::env::var("TFLITE_LIB_PATH") {
-            let path = PathBuf::from(env_path);
             if path.exists() {
                 return Some(path);
             }
