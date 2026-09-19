@@ -1,0 +1,27 @@
+[package]
+name = "bubblepop"
+version = "0.1.0"
+edition = "2024"
+description = "A speech bubble extractor for comics and manga in Rust"
+license = "Apache-2.0"
+authors = ["letmutex"]
+repository = "https://github.com/letmutex/bubble-pop"
+homepage = "https://github.com/letmutex/bubble-pop"
+categories = ["computer-vision", "multimedia::images"]
+keywords = ["speech-bubble", "segmentation", "computer-vision"]
+readme = "README.md"
+
+[dependencies]
+thiserror = "2.0"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+libloading = "0.8"
+
+[build-dependencies]
+ureq = { version = "2.10", default-features = false, features = ["tls"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", default-features = false, features = ["html_reports", "cargo_bench_support"] }
+
+[[bench]]
+name = "detection"
+harness = false
