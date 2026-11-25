@@ -62,6 +62,13 @@ SDF_TRUNCATION_PX = 12.0
 
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
+_NARROW_ELLIPSE_KERNELS: dict[int, np.ndarray] = {
+    radius: cv2.getStructuringElement(
+        cv2.MORPH_ELLIPSE, (2 * radius + 1, 2 * radius + 1)
+    )
+    for radius in range(NARROW_OPENING_MIN_RADIUS_PX, NARROW_OPENING_MAX_RADIUS_PX + 1)
+}
+
 
 def imread_unicode(path: Path, flags: int) -> np.ndarray | None:
     """Unicode-safe cv2.imread that strips PNG iCCP chunks to silence libpng warnings."""
@@ -71,7 +78,7 @@ def imread_unicode(path: Path, flags: int) -> np.ndarray | None:
         return None
     if not raw:
         return None
-    if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+    if raw.startswith(b"\x89PNG\r\n\x1a\n") and b"iCCP" in raw:
         chunks = [raw[:8]]
         pos = 8
         while pos < len(raw):
@@ -127,11 +134,13 @@ def accumulate_instance_narrow(
     )
     for component_id in range(1, component_count):
         x, y, comp_w, comp_h = component_stats[component_id, :4]
-        label_crop = component_labels[y : y + comp_h, x : x + comp_w]
-        component_crop = label_crop == component_id
-        component_uint8 = component_crop.astype(np.uint8)
+        if component_count == 2:
+            component_uint8 = instance_mask[y : y + comp_h, x : x + comp_w]
+        else:
+            label_crop = component_labels[y : y + comp_h, x : x + comp_w]
+            component_uint8 = (label_crop == component_id).astype(np.uint8)
         component_dist = cv2.distanceTransform(component_uint8, cv2.DIST_L2, 5)
-        body_radius = float(component_dist[component_crop].max())
+        body_radius = float(component_dist.max())
         if body_radius < NARROW_MIN_BODY_RADIUS_PX:
             continue
         opening_radius = int(round(body_radius * NARROW_OPENING_BODY_RATIO))
@@ -139,10 +148,7 @@ def accumulate_instance_narrow(
             max(opening_radius, NARROW_OPENING_MIN_RADIUS_PX),
             NARROW_OPENING_MAX_RADIUS_PX,
         )
-        opening_kernel = cv2.getStructuringElement(
-            cv2.MORPH_ELLIPSE,
-            (2 * opening_radius + 1, 2 * opening_radius + 1),
-        )
+        opening_kernel = _NARROW_ELLIPSE_KERNELS[opening_radius]
         opened = cv2.morphologyEx(component_uint8, cv2.MORPH_OPEN, opening_kernel)
         residue_crop = component_uint8 & (opened == 0)
         target_crop = narrow_residue[
@@ -172,6 +178,7 @@ class BubbleEvalDataset(Dataset):
         input_width: int = DEFAULT_WIDTH,
         confidence_low: float = CONFIDENCE_LOW,
         compute_distance: bool = False,
+        compact: bool = False,
     ) -> None:
         self.root_dir = Path(root_dir)
         self.img_root = self.root_dir / "images"
@@ -181,6 +188,7 @@ class BubbleEvalDataset(Dataset):
         self.input_width = int(input_width)
         self.confidence_low = float(confidence_low)
         self.compute_distance = bool(compute_distance)
+        self.compact = bool(compact)
 
         if not self.img_root.is_dir():
             raise FileNotFoundError(f"Images directory not found: {self.img_root}")
@@ -250,16 +258,27 @@ class BubbleEvalDataset(Dataset):
             cv2.resize(hard_mask, (resized_w, resized_h), interpolation=cv2.INTER_NEAREST) > 0
         )
 
-        # Thin foreground band
-        fg_dist = cv2.distanceTransform(resized_hard_mask, cv2.DIST_L2, 5)
-        canvas_thin = (
-            (resized_hard_mask > 0) & (fg_dist <= THIN_FOREGROUND_DISTANCE_PX)
-        ).astype(np.float32)
+        has_fg = bool(resized_hard_mask.any())
 
-        # Boundary + per-instance narrow protrusions + confidence map
-        canvas_boundary = cv2.morphologyEx(
-            resized_hard_mask, cv2.MORPH_GRADIENT, self._ellipse3
-        )
+        # Thin foreground band + mask boundary
+        if has_fg:
+            fg_dist = cv2.distanceTransform(resized_hard_mask, cv2.DIST_L2, 5)
+            canvas_thin_u8 = (
+                (resized_hard_mask > 0) & (fg_dist <= THIN_FOREGROUND_DISTANCE_PX)
+            ).astype(np.uint8)
+            canvas_boundary = cv2.morphologyEx(
+                resized_hard_mask, cv2.MORPH_GRADIENT, self._ellipse3
+            )
+        else:
+            fg_dist = (
+                np.zeros((self.input_height, self.input_width), dtype=np.float32)
+                if self.compute_distance
+                else None
+            )
+            canvas_thin_u8 = np.zeros_like(resized_hard_mask, dtype=np.uint8)
+            canvas_boundary = np.zeros_like(resized_hard_mask, dtype=np.uint8)
+
+        # Per-instance narrow protrusions + confidence map
         narrow_residue = np.zeros_like(resized_hard_mask, dtype=np.uint8)
         canvas_conf = np.zeros((self.input_height, self.input_width), dtype=np.float32)
 
@@ -305,29 +324,44 @@ class BubbleEvalDataset(Dataset):
                 accumulate_instance_narrow(instance_mask, narrow_residue, px0, py0)
                 narrow_instance_count += 1
 
-        if not scored_polygons and resized_hard_mask.any():
+        if not scored_polygons and has_fg:
             canvas_conf = resized_hard_mask.astype(np.float32)
-        if narrow_instance_count == 0 and resized_hard_mask.any():
+        if narrow_instance_count == 0 and has_fg:
             accumulate_instance_narrow(resized_hard_mask, narrow_residue)
 
-        canvas_narrow = (
-            (cv2.dilate(narrow_residue, self._ellipse3) > 0) & (resized_hard_mask > 0)
-        ).astype(np.float32)
+        if has_fg and narrow_residue.any():
+            canvas_narrow_u8 = (
+                (cv2.dilate(narrow_residue, self._ellipse3) > 0) & (resized_hard_mask > 0)
+            ).astype(np.uint8)
+        else:
+            canvas_narrow_u8 = np.zeros_like(resized_hard_mask, dtype=np.uint8)
 
-        image_tensor = (
-            torch.from_numpy(canvas_img).unsqueeze(0).float().div_(255.0)
-            .sub_(NORM_MEAN)
-            .div_(NORM_STD)
-        )
-
-        item = {
-            "image": image_tensor,
-            "mask": torch.from_numpy(resized_hard_mask.astype(np.float32)).unsqueeze(0),
-            "boundary": torch.from_numpy(canvas_boundary.astype(np.float32)).unsqueeze(0),
-            "thin": torch.from_numpy(canvas_thin).unsqueeze(0),
-            "narrow": torch.from_numpy(canvas_narrow).unsqueeze(0),
-            "conf": torch.from_numpy(canvas_conf).unsqueeze(0),
-        }
+        if self.compact:
+            item = {
+                "image": torch.from_numpy(canvas_img).unsqueeze(0),
+                "mask": torch.from_numpy(resized_hard_mask).unsqueeze(0),
+                "boundary": torch.from_numpy(canvas_boundary).unsqueeze(0),
+                "thin": torch.from_numpy(canvas_thin_u8).unsqueeze(0),
+                "narrow": torch.from_numpy(canvas_narrow_u8).unsqueeze(0),
+                "conf": torch.from_numpy(canvas_conf).unsqueeze(0),
+            }
+        else:
+            image_tensor = (
+                torch.from_numpy(canvas_img)
+                .unsqueeze(0)
+                .float()
+                .div_(255.0)
+                .sub_(NORM_MEAN)
+                .div_(NORM_STD)
+            )
+            item = {
+                "image": image_tensor,
+                "mask": torch.from_numpy(resized_hard_mask.astype(np.float32)).unsqueeze(0),
+                "boundary": torch.from_numpy(canvas_boundary.astype(np.float32)).unsqueeze(0),
+                "thin": torch.from_numpy(canvas_thin_u8.astype(np.float32)).unsqueeze(0),
+                "narrow": torch.from_numpy(canvas_narrow_u8.astype(np.float32)).unsqueeze(0),
+                "conf": torch.from_numpy(canvas_conf).unsqueeze(0),
+            }
         if self.compute_distance:
             bg_dist = cv2.distanceTransform(1 - resized_hard_mask, cv2.DIST_L2, 5)
             sdf = np.clip((fg_dist - bg_dist) / SDF_TRUNCATION_PX, -1.0, 1.0).astype(
